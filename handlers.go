@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -86,6 +87,34 @@ func handlerAgg(s *state, _ command) error {
 	}
 
 	fmt.Println(feed)
+	return nil
+}
+
+func scrapeFeeds(s *state) error {
+	nextFeed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
+	}
+
+	err = s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: time.Now(),
+		ID:        nextFeed.ID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// FETCH FEED USING URL, ITERATE AND PRINT TITLES TO CONSOLE
+	// feed, err := fetchFeed(context.Background(), nextFeed.Url)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // print titles
 	return nil
 }
 

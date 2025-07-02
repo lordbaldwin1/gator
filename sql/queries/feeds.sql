@@ -60,3 +60,16 @@ WHERE feed_follows.user_id = $1
 AND feed_follows.feed_id
 IN (SELECT feed_id FROM feeds WHERE feeds.url = $2)
 RETURNING *;
+
+-- name: MarkFeedFetched :exec
+UPDATE feeds
+SET 
+  last_fetched_at = $1,
+  updated_at = $2
+WHERE
+  id = $3;
+
+-- name: GetNextFeedToFetch :one
+SELECT * FROM feeds
+ORDER BY last_fetched_at ASC NULLS FIRST;
+
