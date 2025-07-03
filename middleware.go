@@ -13,7 +13,10 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 			return err
 		}
 
-		handler(s, cmd, user)
+		err = handler(s, cmd, user)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 }

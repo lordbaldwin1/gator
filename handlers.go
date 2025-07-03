@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -78,23 +79,30 @@ func handlerGetUsers(s *state, _ command) error {
 	return nil
 }
 
-func handlerAgg(s *state, _ command) error {
-	const URL = "https://www.wagslane.dev/index.xml"
-
-	feed, err := fetchFeed(context.Background(), URL)
-	if err != nil {
-		return err
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.Args) < 1 || len(cmd.Args) > 2 {
+		return fmt.Errorf("usage: %s <inverval> (e.g., 1h, 1m, 1g)", cmd.Name)
 	}
 
-	fmt.Println(feed)
-	return nil
+	interval, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return errors.New("error: failed to parse interval")
+	}
+
+	ticker := time.NewTicker(interval)
+	log.Printf("Collecting feeds every %s...", interval)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 }
 
-func scrapeFeeds(s *state) error {
+func scrapeFeeds(s *state) {
 	nextFeed, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		return err
+		log.Println("Couldn't get next feeds to fetch", err)
+		return
 	}
+	log.Println("Found a feed to fetch!")
 
 	err = s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
 		LastFetchedAt: sql.NullTime{
@@ -105,26 +113,33 @@ func scrapeFeeds(s *state) error {
 		ID:        nextFeed.ID,
 	})
 	if err != nil {
-		return err
+		log.Printf("Couldn't mark feed %s fetched: %v", nextFeed.Name, err)
+		return
 	}
 
 	// FETCH FEED USING URL, ITERATE AND PRINT TITLES TO CONSOLE
-	// feed, err := fetchFeed(context.Background(), nextFeed.Url)
-	// if err != nil {
-	// 	return err
-	// }
+	feedData, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		log.Printf("Couldn't collect feed %s: %v", nextFeed.Name, err)
+		return
+	}
 
-	// // print titles
-	return nil
+	// print titles
+	for _, item := range feedData.Channel.Item {
+		fmt.Printf("Found post: %s\n", item.Title)
+	}
+	log.Printf("Feed %s collected, %v posts found", nextFeed.Name, len(feedData.Channel.Item))
 }
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) < 2 {
-		return errors.New("error: feed requires name and url")
+		return fmt.Errorf("usage: %s <name> <url>", cmd.Name)
 	}
 
 	name := cmd.Args[0]
 	url := cmd.Args[1]
+
+	fmt.Println(name, url)
 
 	returnedFeed, err := s.db.AddFeed(context.Background(), database.AddFeedParams{
 		ID:        uuid.New(),
