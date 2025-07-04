@@ -12,4 +12,6 @@ This is a RSS blog aggregator written in Go, featuring the ability to follow and
 - From root directory run: `go build`
 - Command: `gator help` to see a list of commands
 
-## Reflection
+## Goals
+
+This project was created to reinforce the fundamentals of HTTP clients, JSON parsing, and database integration in Go. In the process, I learned how to implement middleware in Go and, in general, build and architect a CLI tool in Go.
