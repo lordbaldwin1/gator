@@ -48,7 +48,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUsers = `-- name: DeleteUsers :exec
-
 DELETE FROM users
 `
 
